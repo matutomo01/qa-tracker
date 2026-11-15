@@ -1,0 +1,41 @@
+meta {
+  name: 02_チケット新規作成_POST_正常系
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/tickets
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "[自動テスト] 決済確認モーダルでキャンセルボタンが反応しない",
+    "priority": "High",
+    "severity": "Major",
+    "reproductionSteps": "1. 購入手続きへ進む\n2. 決済確認モーダルを表示\n3. キャンセルボタンをクリック",
+    "expectedResult": "モーダルが閉じ、元の画面に戻ること",
+    "actualResult": "ボタンがクリックできずモーダルが閉じない"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.responseTime: lt 500
+  res.body.success: eq true
+  res.body.data.id: isDefined
+  res.body.data.status: eq "New"
+  res.body.data.priority: eq "High"
+}
+
+tests {
+  test("IDが採番され、初期ステータスがNewであること", function() {
+    const data = res.getBody().data;
+    expect(data.id).to.be.a('string');
+    expect(data.status).to.equal('New');
+    // 次のリクエスト（取得・更新・削除）へ引き継ぐために変数に保存
+    bru.setVar("createdTicketId", data.id);
+  });
+}

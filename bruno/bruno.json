@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "QA Tracker API Tests",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

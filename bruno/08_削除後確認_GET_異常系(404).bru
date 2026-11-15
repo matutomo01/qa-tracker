@@ -1,0 +1,24 @@
+meta {
+  name: 08_削除後確認_GET_異常系(404)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/tickets/{{createdTicketId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+  res.responseTime: lt 500
+  res.body.success: eq false
+  res.body.error.code: eq "TICKET_NOT_FOUND"
+}
+
+tests {
+  test("削除されたチケットにアクセスすると404 Not Foundが返却されること", function() {
+    expect(res.getBody().error.code).to.equal("TICKET_NOT_FOUND");
+  });
+}

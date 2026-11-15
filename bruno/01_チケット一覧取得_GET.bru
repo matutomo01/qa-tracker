@@ -1,0 +1,26 @@
+meta {
+  name: 01_チケット一覧取得_GET
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/tickets
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+  res.body.data: isDefined
+  res.responseTime: lt 500
+}
+
+tests {
+  test("レスポンスが正常な配列構造であること", function() {
+    const data = res.getBody().data;
+    expect(data).to.be.an('array');
+    expect(res.getBody().count).to.be.a('number');
+  });
+}

@@ -1,0 +1,38 @@
+meta {
+  name: 06_チケット起票_POST_異常系(必須欠落)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/tickets
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "",
+    "priority": "High",
+    "severity": "Major",
+    "reproductionSteps": "手順のみ入力",
+    "expectedResult": "期待値のみ入力",
+    "actualResult": "実際値のみ入力"
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.responseTime: lt 500
+  res.body.success: eq false
+  res.body.error.code: eq "VALIDATION_ERROR"
+  res.body.error.field: eq "title"
+}
+
+tests {
+  test("必須項目(title)が空の場合にバリデーションエラーとなること", function() {
+    const error = res.getBody().error;
+    expect(error.code).to.equal("VALIDATION_ERROR");
+    expect(error.field).to.equal("title");
+  });
+}

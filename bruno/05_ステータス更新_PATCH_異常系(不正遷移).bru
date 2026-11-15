@@ -1,0 +1,32 @@
+meta {
+  name: 05_ステータス更新_PATCH_異常系(不正遷移)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/tickets/{{createdTicketId}}/status
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "status": "New"
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.responseTime: lt 500
+  res.body.success: eq false
+  res.body.error.code: eq "INVALID_STATUS_TRANSITION"
+}
+
+tests {
+  test("ActiveからNewへの不正なステータス逆行が弾かれること", function() {
+    const error = res.getBody().error;
+    expect(error.code).to.equal("INVALID_STATUS_TRANSITION");
+    expect(error.field).to.equal("status");
+  });
+}

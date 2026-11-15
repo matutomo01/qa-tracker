@@ -1,0 +1,30 @@
+meta {
+  name: 04_ステータス更新_PATCH_正常系
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/tickets/{{createdTicketId}}/status
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "status": "Active"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.responseTime: lt 500
+  res.body.success: eq true
+  res.body.data.status: eq "Active"
+}
+
+tests {
+  test("ステータスが New から Active へ正常に遷移すること", function() {
+    expect(res.getBody().data.status).to.equal('Active');
+  });
+}

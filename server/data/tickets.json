@@ -1,0 +1,50 @@
+[
+  {
+    "id": "t-1794725252233",
+    "title": "テストです",
+    "reproductionSteps": "テスト手順",
+    "expectedResult": "テスト基準値",
+    "actualResult": "テスト実際値",
+    "priority": "Medium",
+    "severity": "Major",
+    "status": "New",
+    "createdAt": "2026-11-15T06:47:32.233Z",
+    "updatedAt": "2026-11-15T06:47:32.233Z"
+  },
+  {
+    "id": "t-1794723644879",
+    "title": "test",
+    "reproductionSteps": "test",
+    "expectedResult": "test",
+    "actualResult": "test",
+    "priority": "Medium",
+    "severity": "Major",
+    "status": "New",
+    "createdAt": "2026-11-15T06:20:44.879Z",
+    "updatedAt": "2026-11-15T06:20:44.879Z"
+  },
+  {
+    "id": "t-1715000001",
+    "title": "ログイン画面でパスワード表示/非表示ボタンが機能しない",
+    "reproductionSteps": "1. ログイン画面を開く\n2. パスワード入力欄に任意の文字を入力する\n3. 目のアイコン（表示切替）をクリックする",
+    "expectedResult": "パスワードが平文表示とマスク表示で切り替わること",
+    "actualResult": "アイコンをクリックしてもマスク（●●●）のまま変化しない",
+    "priority": "Medium",
+    "severity": "Minor",
+    "status": "New",
+    "createdAt": "2026-11-15T10:00:00.000Z",
+    "updatedAt": "2026-11-15T10:00:00.000Z"
+  },
+  {
+    "id": "t-1715000002",
+    "title": "カート画面で数量を0に更新した際に500内部サーバーエラーが発生する",
+    "reproductionSteps": "1. 商品をカートに追加する\n2. カート画面へ移動する\n3. 数量入力欄に '0' を入力して更新ボタンを押下する",
+    "expectedResult": "対象商品がカートから削除されるか、数量入力エラーのバリデーションが表示されること",
+    "actualResult": "画面がクラッシュし、HTTP 500エラーのアラートが表示される",
+    "priority": "High",
+    "severity": "Critical",
+    "status": "Active",
+    "createdAt": "2026-11-15T11:30:00.000Z",
+    "updatedAt": "2026-11-15T12:00:00.000Z"
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "name": "qa-tracker",
+  "version": "1.0.0",
+  "description": "## 概要 実務における **Azure DevOps（Boards / Test Plans）** でのテストケース管理・ステータス運用と、**Bruno** を用いたAPI自動回帰テスト（リグレッションテスト・アサーション）の実務知見を元に設計・開発した「QAトラッキングシステム」および「API自動テスト基盤」です。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "cd bruno && npx @usebruno/cli run --env Local"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

@@ -1,0 +1,26 @@
+meta {
+  name: 03_チケット詳細取得_GET_正常系
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/tickets/{{createdTicketId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.responseTime: lt 500
+  res.body.success: eq true
+  res.body.data.id: eq {{createdTicketId}}
+  res.body.data.status: eq "New"
+}
+
+tests {
+  test("作成したチケットの詳細情報が正しく取得できること", function() {
+    const data = res.getBody().data;
+    expect(data.title).to.include("[自動テスト]");
+  });
+}

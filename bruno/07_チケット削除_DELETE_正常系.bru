@@ -1,0 +1,24 @@
+meta {
+  name: 07_チケット削除_DELETE_正常系
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/api/tickets/{{createdTicketId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.responseTime: lt 500
+  res.body.success: eq true
+  res.body.data.id: eq {{createdTicketId}}
+}
+
+tests {
+  test("作成したチケットが正常に削除されること", function() {
+    expect(res.getBody().success).to.be.true;
+  });
+}

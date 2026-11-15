@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA Tracker - SDET Portfolio</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-logo">
+        <span class="logo-icon">🛡️</span>
+        <div>
+          <h1>QA Tracker</h1>
+          <p class="subtitle">Azure DevOps Flow & Bruno Automated API Testing</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="status-badge api-status" id="api-status">
+          <span class="dot"></span> API Server Online
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="main-container">
+    <!-- メトリクスサマリーバー -->
+    <section class="metrics-bar">
+      <div class="metric-card" data-filter="all">
+        <span class="metric-label">全チケット</span>
+        <span class="metric-value" id="count-all">0</span>
+      </div>
+      <div class="metric-card metric-new" data-filter="New">
+        <span class="metric-label">新規 (New)</span>
+        <span class="metric-value" id="count-new">0</span>
+      </div>
+      <div class="metric-card metric-active" data-filter="Active">
+        <span class="metric-label">対応中 (Active)</span>
+        <span class="metric-value" id="count-active">0</span>
+      </div>
+      <div class="metric-card metric-resolved" data-filter="Resolved">
+        <span class="metric-label">確認待ち (Resolved)</span>
+        <span class="metric-value" id="count-resolved">0</span>
+      </div>
+      <div class="metric-card metric-closed" data-filter="Closed">
+        <span class="metric-label">完了 (Closed)</span>
+        <span class="metric-value" id="count-closed">0</span>
+      </div>
+    </section>
+
+    <div class="content-grid">
+      <!-- 左側：チケット起票フォーム -->
+      <section class="card form-section">
+        <div class="card-header">
+          <h2>📝 不具合・QAチケット起票</h2>
+          <span class="info-tag">Azure DevOps Schema</span>
+        </div>
+        <form id="ticket-form" class="ticket-form">
+          <div class="form-group">
+            <div class="label-row">
+              <label for="ticket-title">タイトル <span class="required">*</span></label>
+              <span class="char-counter" id="title-counter">0 / 100</span>
+            </div>
+            <input type="text" id="ticket-title" maxlength="100" placeholder="例: ログインボタン押下時に401エラーが発生する" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ticket-priority">優先度 (Priority)</label>
+              <select id="ticket-priority">
+                <option value="Low">Low (低)</option>
+                <option value="Medium" selected>Medium (中)</option>
+                <option value="High">High (高)</option>
+                <option value="Critical">Critical (最優先)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="ticket-severity">重大度 (Severity)</label>
+              <select id="ticket-severity">
+                <option value="Minor">Minor (軽微)</option>
+                <option value="Major" selected>Major (主要機能)</option>
+                <option value="Critical">Critical (重大)</option>
+                <option value="Blocker">Blocker (進行不能)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="ticket-steps">再現手順 (Reproduction Steps) <span class="required">*</span></label>
+            <textarea id="ticket-steps" rows="3" placeholder="1. ログイン画面を開く&#10;2. 資格情報を入力する&#10;3. 送信ボタンを押下" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="ticket-expected">期待される結果 (Expected Result) <span class="required">*</span></label>
+            <textarea id="ticket-expected" rows="2" placeholder="ダッシュボード画面へ正常に遷移すること" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="ticket-actual">実際の結果 (Actual Result) <span class="required">*</span></label>
+            <textarea id="ticket-actual" rows="2" placeholder="エラーアラートが表示され画面遷移しない" required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="btn-submit">
+            <span class="btn-text">チケットを起票する (POST /api/tickets)</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- 右側：チケット一覧とステータス管理 -->
+      <section class="card list-section">
+        <div class="card-header">
+          <div class="list-title-row">
+            <h2>📋 チケット一覧・ステータス管理</h2>
+            <button class="btn btn-sm btn-outline" id="btn-refresh" title="一覧を更新">🔄 更新</button>
+          </div>
+          <!-- フィルタータブ -->
+          <div class="filter-tabs">
+            <button class="tab-btn active" data-filter="all">すべて</button>
+            <button class="tab-btn" data-filter="New">New</button>
+            <button class="tab-btn" data-filter="Active">Active</button>
+            <button class="tab-btn" data-filter="Resolved">Resolved</button>
+            <button class="tab-btn" data-filter="Closed">Closed</button>
+          </div>
+        </div>
+
+        <div id="tickets-container" class="tickets-container">
+          <!-- JSで動的にチケットカードが挿入される -->
+          <div class="empty-state">
+            <p>チケットを読み込み中...</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- トースト通知 -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
