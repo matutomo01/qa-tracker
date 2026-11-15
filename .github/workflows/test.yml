@@ -1,0 +1,30 @@
+name: Automated API Regression Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Start API Server & Run Bruno Automated Tests
+      run: |
+        npm start &
+        npx wait-on http://localhost:3000/api/tickets --timeout 15000
+        cd bruno
+        npx @usebruno/cli run --env Local
