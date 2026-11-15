@@ -10,32 +10,32 @@ const DATA_FILE = path.join(__dirname, 'data', 'tickets.json');
 // ミドルウェア設定 (Middleware)
 // ==========================================
 // 1. JSONボディのパース
-// クライアントから送られたJSONデータを req.body として扱えるようにする
 app.use(express.json());
 
-// 2. 静的ファイルの配信
-// public フォルダ内の HTML, CSS, JS を配信（同一オリジンで動かすことでCORSを回避）
+// 2. 静的ファイルの配信 (public/ 内のHTML/CSS/JS)
 app.use(express.static(path.join(__dirname, '../public')));
 
 // ==========================================
 // データアクセス用ヘルパー関数
 // ==========================================
-// ファイルからチケット一覧を読み込む
+
+// 【改善点②】ファイル読み込み: エラーを隠蔽せず、ファイル破損時に空配列で上書きしない
 function loadTickets() {
-  try {
-    if (!fs.existsSync(DATA_FILE)) {
-      fs.writeFileSync(DATA_FILE, '[]', 'utf8');
-      return [];
-    }
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    return JSON.parse(data || '[]');
-  } catch (error) {
-    console.error('Failed to read tickets file:', error);
+  if (!fs.existsSync(DATA_FILE)) {
+    // 初回のみ空配列ファイルを作成
+    fs.writeFileSync(DATA_FILE, '[]', 'utf8');
     return [];
   }
+  const data = fs.readFileSync(DATA_FILE, 'utf8');
+  const parsed = JSON.parse(data || '[]');
+
+  if (!Array.isArray(parsed)) {
+    throw new Error('Data format corrupted: tickets.json must contain an array.');
+  }
+  return parsed;
 }
 
-// ファイルへチケット一覧を書き込む
+// 【改善点①】ファイル書き込み: 失敗判定を呼び出し元で検知できるようにする
 function saveTickets(tickets) {
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(tickets, null, 2), 'utf8');
@@ -46,7 +46,7 @@ function saveTickets(tickets) {
   }
 }
 
-// 共通エラーレスポンス生成（テスト容易性を高めるため形式を統一）
+// 共通エラーレスポンス生成
 function sendError(res, statusCode, code, message, field = null) {
   return res.status(statusCode).json({
     success: false,
@@ -61,7 +61,6 @@ function sendError(res, statusCode, code, message, field = null) {
 // ==========================================
 // 業務ロジック定義（Azure Boardsの思想を反映）
 // ==========================================
-// 許可されたステータス遷移マトリクス
 const ALLOWED_TRANSITIONS = {
   New: ['Active'],
   Active: ['Resolved'],
@@ -78,37 +77,45 @@ const VALID_SEVERITIES = ['Minor', 'Major', 'Critical', 'Blocker'];
 
 /**
  * 1. チケット一覧取得 (GET /api/tickets)
- * クエリパラメータ (?status=Active など) によるフィルタリングに対応
  */
 app.get('/api/tickets', (req, res) => {
-  const tickets = loadTickets();
-  const { status } = req.query;
+  try {
+    const tickets = loadTickets();
+    const { status } = req.query;
 
-  if (status) {
-    const filtered = tickets.filter(t => t.status === status);
-    return res.status(200).json({ success: true, count: filtered.length, data: filtered });
+    if (status) {
+      const filtered = tickets.filter(t => t.status === status);
+      return res.status(200).json({ success: true, count: filtered.length, data: filtered });
+    }
+
+    res.status(200).json({ success: true, count: tickets.length, data: tickets });
+  } catch (err) {
+    console.error('GET /api/tickets error:', err);
+    return sendError(res, 500, 'DATABASE_READ_ERROR', 'Failed to retrieve tickets from data store.');
   }
-
-  res.status(200).json({ success: true, count: tickets.length, data: tickets });
 });
 
 /**
  * 2. チケット詳細取得 (GET /api/tickets/:id)
  */
 app.get('/api/tickets/:id', (req, res) => {
-  const tickets = loadTickets();
-  const ticket = tickets.find(t => t.id === req.params.id);
+  try {
+    const tickets = loadTickets();
+    const ticket = tickets.find(t => t.id === req.params.id);
 
-  if (!ticket) {
-    return sendError(res, 404, 'TICKET_NOT_FOUND', `Ticket with id '${req.params.id}' was not found.`);
+    if (!ticket) {
+      return sendError(res, 404, 'TICKET_NOT_FOUND', `Ticket with id '${req.params.id}' was not found.`);
+    }
+
+    res.status(200).json({ success: true, data: ticket });
+  } catch (err) {
+    console.error('GET /api/tickets/:id error:', err);
+    return sendError(res, 500, 'DATABASE_READ_ERROR', 'Failed to retrieve ticket details.');
   }
-
-  res.status(200).json({ success: true, data: ticket });
 });
 
 /**
  * 3. チケット新規作成 (POST /api/tickets)
- * 必須チェック・境界値・初期ステータス付与
  */
 app.post('/api/tickets', (req, res) => {
   console.log('\n========================================');
@@ -123,7 +130,7 @@ app.post('/api/tickets', (req, res) => {
 
   const { title, reproductionSteps, expectedResult, actualResult, priority, severity } = req.body;
 
-  // バリデーション: 必須項目チェック & 型チェック & 文字数制限
+  // バリデーション
   if (!title || typeof title !== 'string' || title.trim() === '') {
     return sendError(res, 400, 'VALIDATION_ERROR', 'Title is required and must not be empty.', 'title');
   }
@@ -159,84 +166,108 @@ app.post('/api/tickets', (req, res) => {
     return sendError(res, 400, 'VALIDATION_ERROR', `Invalid severity. Must be one of: ${VALID_SEVERITIES.join(', ')}`, 'severity');
   }
 
-  const now = new Date().toISOString();
-  const newTicket = {
-    id: `t-${Date.now()}`,
-    title: title.trim(),
-    reproductionSteps: reproductionSteps.trim(),
-    expectedResult: expectedResult.trim(),
-    actualResult: actualResult.trim(),
-    priority: selectedPriority,
-    severity: selectedSeverity,
-    status: 'New', // 初期ステータスは必ず New
-    createdAt: now,
-    updatedAt: now
-  };
+  try {
+    const tickets = loadTickets();
+    const now = new Date().toISOString();
+    const newTicket = {
+      id: `t-${Date.now()}`,
+      title: title.trim(),
+      reproductionSteps: reproductionSteps.trim(),
+      expectedResult: expectedResult.trim(),
+      actualResult: actualResult.trim(),
+      priority: selectedPriority,
+      severity: selectedSeverity,
+      status: 'New', // 初期ステータスは必ず New
+      createdAt: now,
+      updatedAt: now
+    };
 
-  const tickets = loadTickets();
-  tickets.unshift(newTicket); // 最新を先頭に追加
-  saveTickets(tickets);
+    tickets.unshift(newTicket);
 
-  // 201 Created を返却（RESTful API の標準）
-  res.status(201).json({ success: true, data: newTicket });
+    // 【改善点①】保存成否の厳格チェック
+    if (!saveTickets(tickets)) {
+      return sendError(res, 500, 'STORAGE_ERROR', 'Failed to persist ticket data to disk.');
+    }
+
+    res.status(201).json({ success: true, data: newTicket });
+  } catch (err) {
+    console.error('POST /api/tickets error:', err);
+    return sendError(res, 500, 'DATABASE_WRITE_ERROR', 'Failed to process ticket creation.');
+  }
 });
 
 /**
  * 4. チケットのステータス更新 (PATCH /api/tickets/:id/status)
- * 状態遷移マトリクスによる不正遷移のガード
  */
 app.patch('/api/tickets/:id/status', (req, res) => {
   const { status: nextStatus } = req.body;
 
-  if (!nextStatus) {
-    return sendError(res, 400, 'VALIDATION_ERROR', 'Status field is required.', 'status');
+  if (!nextStatus || typeof nextStatus !== 'string') {
+    return sendError(res, 400, 'VALIDATION_ERROR', 'Status field is required and must be a string.', 'status');
   }
 
-  const tickets = loadTickets();
-  const ticketIndex = tickets.findIndex(t => t.id === req.params.id);
+  try {
+    const tickets = loadTickets();
+    const ticketIndex = tickets.findIndex(t => t.id === req.params.id);
 
-  if (ticketIndex === -1) {
-    return sendError(res, 404, 'TICKET_NOT_FOUND', `Ticket with id '${req.params.id}' was not found.`);
+    if (ticketIndex === -1) {
+      return sendError(res, 404, 'TICKET_NOT_FOUND', `Ticket with id '${req.params.id}' was not found.`);
+    }
+
+    const currentTicket = tickets[ticketIndex];
+    const allowed = ALLOWED_TRANSITIONS[currentTicket.status] || [];
+
+    // ステータス遷移ルールの検証
+    if (!allowed.includes(nextStatus)) {
+      return sendError(
+        res,
+        400,
+        'INVALID_STATUS_TRANSITION',
+        `Cannot transition status from '${currentTicket.status}' to '${nextStatus}'. Allowed: [${allowed.join(', ')}]`,
+        'status'
+      );
+    }
+
+    currentTicket.status = nextStatus;
+    currentTicket.updatedAt = new Date().toISOString();
+    tickets[ticketIndex] = currentTicket;
+
+    // 【改善点①】保存成否の厳格チェック
+    if (!saveTickets(tickets)) {
+      return sendError(res, 500, 'STORAGE_ERROR', 'Failed to persist status update to disk.');
+    }
+
+    res.status(200).json({ success: true, data: currentTicket });
+  } catch (err) {
+    console.error('PATCH /api/tickets/:id/status error:', err);
+    return sendError(res, 500, 'DATABASE_WRITE_ERROR', 'Failed to update ticket status.');
   }
-
-  const currentTicket = tickets[ticketIndex];
-  const allowed = ALLOWED_TRANSITIONS[currentTicket.status] || [];
-
-  // ステータス遷移ルールの検証
-  if (!allowed.includes(nextStatus)) {
-    return sendError(
-      res,
-      400,
-      'INVALID_STATUS_TRANSITION',
-      `Cannot transition status from '${currentTicket.status}' to '${nextStatus}'. Allowed: [${allowed.join(', ')}]`,
-      'status'
-    );
-  }
-
-  // ステータス更新
-  currentTicket.status = nextStatus;
-  currentTicket.updatedAt = new Date().toISOString();
-  tickets[ticketIndex] = currentTicket;
-  saveTickets(tickets);
-
-  res.status(200).json({ success: true, data: currentTicket });
 });
 
 /**
  * 5. チケット削除 (DELETE /api/tickets/:id)
  */
 app.delete('/api/tickets/:id', (req, res) => {
-  const tickets = loadTickets();
-  const targetIndex = tickets.findIndex(t => t.id === req.params.id);
+  try {
+    const tickets = loadTickets();
+    const targetIndex = tickets.findIndex(t => t.id === req.params.id);
 
-  if (targetIndex === -1) {
-    return sendError(res, 404, 'TICKET_NOT_FOUND', `Ticket with id '${req.params.id}' was not found.`);
+    if (targetIndex === -1) {
+      return sendError(res, 404, 'TICKET_NOT_FOUND', `Ticket with id '${req.params.id}' was not found.`);
+    }
+
+    const deleted = tickets.splice(targetIndex, 1)[0];
+
+    // 【改善点①】保存成否の厳格チェック
+    if (!saveTickets(tickets)) {
+      return sendError(res, 500, 'STORAGE_ERROR', 'Failed to persist ticket deletion to disk.');
+    }
+
+    res.status(200).json({ success: true, message: 'Ticket deleted successfully', data: deleted });
+  } catch (err) {
+    console.error('DELETE /api/tickets/:id error:', err);
+    return sendError(res, 500, 'DATABASE_WRITE_ERROR', 'Failed to delete ticket.');
   }
-
-  const deleted = tickets.splice(targetIndex, 1)[0];
-  saveTickets(tickets);
-
-  res.status(200).json({ success: true, message: 'Ticket deleted successfully', data: deleted });
 });
 
 // ==========================================

@@ -1,5 +1,7 @@
 # QA Tracker & API Automated Test Suite
 
+[![Automated API Tests](https://github.com/matutomo01/qa-tracker/actions/workflows/test.yml/badge.svg)](https://github.com/matutomo01/qa-tracker/actions)
+
 ## 概要
 実務における **Azure DevOps（Boards / Test Plans）** でのテストケース管理・ステータス運用と、**Bruno** を用いたAPI自動回帰テスト（リグレッションテスト・アサーション）の実務知見を元に設計・開発した「QAトラッキングシステム」および「API自動テスト基盤」です。
 
@@ -73,6 +75,6 @@ qa-tracker/
 
 ## ドキュメント一覧
 
-- [要件定義書 (docs/requirements.md)](file:///C:/Users/owner/Projects/qa-tracker/docs/requirements.md)
-- [基本設計書 (docs/basic-design.md)](file:///C:/Users/owner/Projects/qa-tracker/docs/basic-design.md)
-- [テスト戦略・アサーション設計書 (docs/test-strategy.md)](file:///C:/Users/owner/Projects/qa-tracker/docs/test-strategy.md)
+- [要件定義書 (docs/requirements.md)](./docs/requirements.md)
+- [基本設計書 (docs/basic-design.md)](./docs/basic-design.md)
+- [テスト戦略・アサーション設計書 (docs/test-strategy.md)](./docs/test-strategy.md)
